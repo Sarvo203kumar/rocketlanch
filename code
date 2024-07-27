@@ -1,152 +1,92 @@
-import java.util.Scanner;
-
-public class RocketLaunchSimulator {
-    public static void main(String[] args) {
-        Rocket rocket = new Rocket();
-        Scanner scanner = new Scanner(System.in);
-        
-        while (true) {
-            System.out.println("Enter command:");
-            String commandLine = scanner.nextLine();
-            try {
-                CommandExecutor.executeCommand(commandLine, rocket);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-        }
-    }
+interface RocketState {
+    void startChecks(Rocket rocket);
+    void launch(Rocket rocket);
+    void fastForward(Rocket rocket, int seconds);
 }
-class Rocket {
-    private String stage = "Pre-Launch";
-    private double fuel = 100.0;
-    private double altitude = 0.0;
-    private double speed = 0.0;
-    private boolean checksCompleted = false;
-    private boolean missionStarted = false;
 
-    public String getStage() {
-        return stage;
-    }
-
-    public double getFuel() {
-        return fuel;
-    }
-
-    public double getAltitude() {
-        return altitude;
-    }
-
-    public double getSpeed() {
-        return speed;
-    }
-
-    public boolean areChecksCompleted() {
-        return checksCompleted;
-    }
-
-    public void startChecks() {
-        if (checksCompleted) {
-            System.out.println("Pre-Launch checks have already been completed.");
-            return;
-        }
-        checksCompleted = true;
+class PreLaunch implements RocketState {
+    @Override
+    public void startChecks(Rocket rocket) {
         System.out.println("All systems are 'Go' for launch.");
+        rocket.setState(new Stage1());
     }
 
-    public void launch() {
-        if (!checksCompleted) {
-            throw new IllegalStateException("Pre-Launch checks not completed.");
-        }
-        if (missionStarted) {
-            throw new IllegalStateException("Launch has already started.");
-        }
-        
-        missionStarted = true;
-        stage = "Stage 1";
-        while (fuel > 0 && altitude < 200) {
-            update();
-            printStatus();
-            try {
-                Thread.sleep(1000); // Simulate real-time update every second
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                System.out.println("Simulation interrupted.");
-            }
-        }
-
-        if (altitude >= 200) {
-            System.out.println("Orbit achieved! Mission Successful.");
-        } else {
-            System.out.println("Mission Failed due to insufficient fuel.");
-        }
+    @Override
+    public void launch(Rocket rocket) {
+        System.out.println("Cannot launch. Pre-launch checks not complete.");
     }
 
-    public void fastForward(int seconds) {
-        if (!checksCompleted) {
-            throw new IllegalStateException("Pre-Launch checks not completed.");
-        }
-        if (!missionStarted) {
-            throw new IllegalStateException("Launch has not started yet.");
-        }
-
-        for (int i = 0; i < seconds; i++) {
-            update();
-            if (fuel <= 0 || altitude >= 200) break;
-        }
-
-        printStatus();
-
-        if (altitude >= 200) {
-            System.out.println("Orbit achieved! Mission Successful.");
-        } else if (fuel <= 0) {
-            System.out.println("Mission Failed due to insufficient fuel.");
-        }
-    }
-
-    private void update() {
-        if (fuel <= 0 || altitude >= 200) return;
-
-        if (stage.equals("Stage 1")) {
-            fuel -= 1;
-            altitude += 10;
-            speed += 1000;
-            if (fuel <= 50) {
-                stage = "Stage 2";
-                System.out.println("Stage 1 complete. Separating stage. Entering Stage 2.");
-            }
-        } else if (stage.equals("Stage 2")) {
-            fuel -= 1;
-            altitude += 5;
-            speed += 500;
-        }
-    }
-
-    private void printStatus() {
-        System.out.printf("Stage: %s, Fuel: %.0f%%, Altitude: %.0f km, Speed: %.0f km/h%n",
-                stage, fuel, altitude, speed);
+    @Override
+    public void fastForward(Rocket rocket, int seconds) {
+        System.out.println("Cannot fast forward. Rocket is in pre-launch state.");
     }
 }
-class CommandExecutor {
-    public static void executeCommand(String commandLine, Rocket rocket) {
-        String[] commandParts = commandLine.split(" ");
-        String command = commandParts[0];
 
-        switch (command) {
-            case "start_checks":
-                rocket.startChecks();
-                break;
-            case "launch":
-                rocket.launch();
-                break;
-            case "fast_forward":
-                if (commandParts.length < 2) {
-                    throw new IllegalArgumentException("fast_forward command requires a time parameter.");
-                }
-                int seconds = Integer.parseInt(commandParts[1]);
-                rocket.fastForward(seconds);
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown command.");
+class Stage1 implements RocketState {
+    @Override
+    public void startChecks(Rocket rocket) {
+        System.out.println("Pre-launch checks already complete.");
+    }
+
+    @Override
+    public void launch(Rocket rocket) {
+        System.out.println("Launching...");
+        rocket.update(1);
+    }
+
+    @Override
+    public void fastForward(Rocket rocket, int seconds) {
+        for (int i = 0; i < seconds; i++) {
+            rocket.update(1);
+            if (rocket.getFuel() <= 0) {
+                System.out.println("Mission Failed due to insufficient fuel.");
+                return;
+            }
         }
+    }
+}
+
+class Stage2 implements RocketState {
+    @Override
+    public void startChecks(Rocket rocket) {
+        System.out.println("Pre-launch checks already complete.");
+    }
+
+    @Override
+    public void launch(Rocket rocket) {
+        System.out.println("Rocket is already launched.");
+    }
+
+    @Override
+    public void fastForward(Rocket rocket, int seconds) {
+        for (int i = 0; i < seconds; i++) {
+            rocket.update(2);
+            if (rocket.getFuel() <= 0) {
+                System.out.println("Mission Failed due to insufficient fuel.");
+                return;
+            }
+            if (rocket.getAltitude() >= 100) {
+                rocket.setState(new Orbit());
+                System.out.println("Orbit achieved! Mission Successful.");
+                return;
+            }
+        }
+    }
+}
+
+class Orbit implements RocketState {
+    @Override
+    public void startChecks(Rocket rocket) {
+        System.out.println("Rocket is already in orbit.");
+    }
+
+    @Override
+    public void launch(Rocket rocket) {
+        System.out.println("Rocket is already in orbit.");
+    }
+
+    @Override
+    public void fastForward(Rocket rocket, int seconds) {
+        System.out.println("Rocket is already in orbit.");
     }
 }
