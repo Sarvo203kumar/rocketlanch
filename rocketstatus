@@ -1,0 +1,51 @@
+class Rocket {
+    private RocketState state;
+    private double fuel;
+    private double altitude;
+    private double speed;
+
+    public Rocket() {
+        this.state = new PreLaunch();
+        this.fuel = 100.0;
+        this.altitude = 0.0;
+        this.speed = 0.0;
+    }
+
+    public void setState(RocketState state) {
+        this.state = state;
+    }
+
+    public double getFuel() {
+        return fuel;
+    }
+
+    public double getAltitude() {
+        return altitude;
+    }
+
+    public void startChecks() {
+        state.startChecks(this);
+    }
+
+    public void launch() {
+        state.launch(this);
+    }
+
+    public void fastForward(int seconds) {
+        state.fastForward(this, seconds);
+    }
+
+    public void update(int stage) {
+        if (fuel > 0) {
+            fuel -= 0.1;
+            altitude += stage == 1 ? 10 : 20;
+            speed += stage == 1 ? 1000 : 2000;
+            System.out.println("Stage: " + stage + ", Fuel: " + fuel + "%, Altitude: " + altitude + " km, Speed: " + speed + " km/h");
+
+            if (stage == 1 && fuel <= 50) {
+                System.out.println("Stage 1 complete. Separating stage. Entering Stage 2.");
+                setState(new Stage2());
+            }
+        }
+    }
+}
